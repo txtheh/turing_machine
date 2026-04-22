@@ -28,4 +28,4 @@ private:
     Ui::TuringMachine *ui;
 };
 
-#endif // TURINGMACHINE_H#endif // TURINGMACHINE_H#endif // TURINGMACHINE_H#endif // TURINGMACHINE_H#endif // TURINGMACHINE_H
+#endif
