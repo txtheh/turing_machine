@@ -210,7 +210,7 @@
        <string>Изменить алфавит</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="btnStart">
+     <widget class="QPushButton" name="btnPlay">
       <property name="geometry">
        <rect>
         <x>20</x>

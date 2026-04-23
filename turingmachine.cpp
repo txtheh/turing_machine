@@ -1,50 +1,135 @@
 #include "turingmachine.h"
 #include "ui_turingmachine.h"
 #include <QMessageBox>
+#include <QTimer>
 
 TuringMachine::TuringMachine(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::TuringMachine)
 {
     ui->setupUi(this);
+    currentState = 0;
+    headPosition = 0;
+    tickSpeed = 500;
+
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &TuringMachine::makeStep);
+
     ui->tableTape->horizontalHeader()->setDefaultSectionSize(45);
     ui->tableTape->verticalHeader()->setDefaultSectionSize(45);
-
     ui->tableTape->horizontalHeader()->setVisible(false);
     ui->tableTape->verticalHeader()->setVisible(false);
-
     ui->tableTape->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    if (ui->stackedWidget) {
-        ui->stackedWidget->setCurrentIndex(0);
+    ui->tableTape->setSelectionMode(QAbstractItemView::NoSelection);
+
+    if (ui->stackedWidget) ui->stackedWidget->setCurrentIndex(0);
+}
+
+TuringMachine::~TuringMachine() {
+    delete ui;
+}
+
+void TuringMachine::on_btnSpeedUp_clicked() {
+    if (tickSpeed > 100) {
+        tickSpeed -= 100;
+        if (timer->isActive()) timer->start(tickSpeed);
+        ui->statusbar->showMessage("Speed: " + QString::number(tickSpeed) + " ms", 1000);
     }
 }
 
-TuringMachine::~TuringMachine()
-{
-    delete ui;
+void TuringMachine::on_btnSpeedDown_clicked() {
+    if (tickSpeed < 2000) {
+        tickSpeed += 100;
+        if (timer->isActive()) timer->start(tickSpeed);
+        ui->statusbar->showMessage("Speed: " + QString::number(tickSpeed) + " ms", 1000);
+    }
 }
+
+void TuringMachine::on_btnPlay_clicked() {
+    timer->start(tickSpeed);
+    ui->statusbar->showMessage("Running...");
+}
+
+void TuringMachine::on_btnStep_clicked() {
+    timer->stop();
+    makeStep();
+}
+
+void TuringMachine::on_btnPause_clicked() {
+    timer->stop();
+    ui->statusbar->showMessage("Paused");
+}
+
+void TuringMachine::on_btnStop_clicked() {
+    timer->stop();
+    on_btnSetString_clicked();
+    ui->statusbar->showMessage("Stopped");
+}
+
+void TuringMachine::makeStep() {
+    if (headPosition < 0 || headPosition >= ui->tableTape->columnCount()) {
+        timer->stop();
+        return;
+    }
+
+    QString currentSymbol = ui->tableTape->item(0, headPosition)->text();
+    int col = -1;
+    for (int i = 0; i < ui->tableProgram->columnCount(); ++i) {
+        if (ui->tableProgram->horizontalHeaderItem(i)->text() == currentSymbol) {
+            col = i; break;
+        }
+    }
+
+    if (col == -1) { timer->stop(); return; }
+
+    QTableWidgetItem *ruleItem = ui->tableProgram->item(currentState, col);
+    if (!ruleItem || ruleItem->text().isEmpty()) {
+        timer->stop();
+        ui->statusbar->showMessage("No rule for q" + QString::number(currentState));
+        return;
+    }
+
+    QStringList parts = ruleItem->text().split(",");
+    if (parts.size() < 3) { timer->stop(); return; }
+
+    QString symbolToWrite = parts[0].trimmed();
+    if (symbolToWrite == "_") symbolToWrite = "λ";
+
+    ui->tableTape->item(0, headPosition)->setData(Qt::BackgroundRole, QVariant());
+    ui->tableTape->item(0, headPosition)->setText(symbolToWrite);
+
+    QString dir = parts[1].trimmed().toUpper();
+    if (dir == "R") headPosition++;
+    else if (dir == "L") headPosition--;
+
+    QString nextSt = parts[2].trimmed().toLower();
+    if (nextSt == "stop" || nextSt == "!") {
+        timer->stop();
+        ui->statusbar->showMessage("Finished");
+    } else {
+        currentState = nextSt.remove("q").toInt();
+    }
+
+    if (headPosition >= 0 && headPosition < ui->tableTape->columnCount()) {
+        ui->tableTape->item(0, headPosition)->setBackground(QColor(173, 216, 230));
+        ui->tableTape->scrollToItem(ui->tableTape->item(0, headPosition), QAbstractItemView::PositionAtCenter);
+        updateCarriagePosition();
+    }
+}
+
 void TuringMachine::on_btnSetAlphabets_clicked() {
     QString mainAlpha = ui->lineAlphabetStr->text();
     QString extraAlpha = ui->lineAlphabetExtra->text();
     QString fullAlpha = mainAlpha + extraAlpha;
-
-    if (fullAlpha.isEmpty()) {
-        QMessageBox::warning(this, "Ошибка", "Алфавит не может быть пустым!");
-        return;
-    }
+    if (!fullAlpha.contains("λ")) fullAlpha += "λ";
 
     ui->tableProgram->setColumnCount(fullAlpha.length());
     ui->tableProgram->setRowCount(1);
-
     for (int i = 0; i < fullAlpha.length(); ++i) {
         ui->tableProgram->setHorizontalHeaderItem(i, new QTableWidgetItem(QString(fullAlpha[i])));
     }
     ui->tableProgram->setVerticalHeaderItem(0, new QTableWidgetItem("q0"));
-
     ui->stackedWidget->setCurrentIndex(1);
-    ui->tableProgram->setEnabled(true);
 }
 
 void TuringMachine::on_btnAddState_clicked() {
@@ -55,113 +140,34 @@ void TuringMachine::on_btnAddState_clicked() {
 
 void TuringMachine::on_btnRemoveState_clicked() {
     int rowCount = ui->tableProgram->rowCount();
-    if (rowCount > 1) {
-        ui->tableProgram->removeRow(rowCount - 1);
-    }
+    if (rowCount > 1) ui->tableProgram->removeRow(rowCount - 1);
 }
 
 void TuringMachine::on_btnSetString_clicked() {
     QString input = ui->lineTapeInput->text();
-    QString allowed = ui->lineAlphabetStr->text();
-
-    // 1. Проверка на вхождение в алфавит
-    for (const QChar &c : input) {
-        if (!allowed.contains(c)) {
-            QMessageBox::critical(this, "Ошибка", QString("Символ '%1' не входит в алфавит!").arg(c));
-            return;
-        }
-    }
-
-    // 2. Настройка размеров ленты
     int tapeSize = 101;
     ui->tableTape->setColumnCount(tapeSize);
     ui->tableTape->setRowCount(1);
-
-    // Убираем заголовки, если они еще видны
-    ui->tableTape->verticalHeader()->hide();
-    ui->tableTape->horizontalHeader()->hide();
-
-    // 3. Заполнение лямбдами
-    QString lambda = "λ";
     for (int i = 0; i < tapeSize; ++i) {
-        ui->tableTape->setItem(0, i, new QTableWidgetItem(lambda));
+        ui->tableTape->setItem(0, i, new QTableWidgetItem("λ"));
         ui->tableTape->item(0, i)->setTextAlignment(Qt::AlignCenter);
     }
-
-    // 4. Установка строки по центру
     int startPos = tapeSize / 2 - input.length() / 2;
-    for (int i = 0; i < input.length(); ++i) {
-        ui->tableTape->item(0, startPos + i)->setText(QString(input[i]));
-    }
-
-    // Обновляем глобальную позицию головы (та, что в private в .h)
+    for (int i = 0; i < input.length(); ++i) ui->tableTape->item(0, startPos + i)->setText(QString(input[i]));
     headPosition = startPos;
-
-    // 5. Визуальное выделение ячейки
-    QColor lightBlue(173, 216, 230);
-    ui->tableTape->item(0, headPosition)->setBackground(lightBlue);
-
-    // Центрируем саму таблицу
-    ui->tableTape->scrollToItem(ui->tableTape->item(0, headPosition), QAbstractItemView::PositionAtCenter);
-
-    // 6. МАГИЯ: Двигаем треугольник (labelCarriage)
-    // Используем QTimer, чтобы дать Qt миллисекунду отрисовать таблицу,
-    // иначе координаты ячейки могут вернуться нулевыми.
-    QTimer::singleShot(50, this, [this]() {
-        // Получаем координаты прямоугольника текущей ячейки
-        QRect cellRect = ui->tableTape->visualItemRect(ui->tableTape->item(0, headPosition));
-
-        // Вычисляем центр ячейки относительно окна
-        // Берем X таблицы + X ячейки + половина ширины ячейки - половина ширины треугольника
-        int targetX = ui->tableTape->x() + cellRect.x() + (cellRect.width() / 2) - (ui->labelCarriage->width() / 2);
-
-        // Перемещаем каретку только по горизонтали
-        ui->labelCarriage->move(targetX, ui->labelCarriage->y());
-    });
-
-    if (ui->statusbar) {
-        ui->statusbar->showMessage("Лента готова к работе", 3000);
-    }
+    currentState = 0;
+    ui->tableTape->item(0, headPosition)->setBackground(QColor(173, 216, 230));
+    updateCarriagePosition();
 }
 
 void TuringMachine::on_btnBackToAlpha_clicked() {
     ui->stackedWidget->setCurrentIndex(0);
 }
 
-
-void TuringMachine::on_btnPause_2_clicked() {
-
-}
-
-void TuringMachine::makeStep() {
-
-    headPosition++;
-    if (headPosition >= ui->tableTape->columnCount()) {
-        timer->stop();
-        return;
-    }
-
-    ui->tableTape->scrollToItem(ui->tableTape->item(0, headPosition), QAbstractItemView::PositionAtCenter);
-
-    for(int i = 0; i < ui->tableTape->columnCount(); ++i) {
-        ui->tableTape->item(0, i)->setBackground(Qt::white);
-    }
-    ui->tableTape->item(0, headPosition)->setBackground(Qt::yellow);
-}
-
-void TuringMachine::on_btnStart_clicked() {
-
-    timer->start(500);
-}
-
 void TuringMachine::updateCarriagePosition() {
-    // Получаем визуальный прямоугольник ячейки, где сейчас "голова"
-    QRect cellRect = ui->tableTape->visualItemRect(ui->tableTape->item(0, headPosition));
-
-    // Вычисляем координаты X (центр ячейки)
-    // Нам нужно прибавить X таблицы, чтобы переместить label относительно окна
-    int x = ui->tableTape->x() + cellRect.center().x() - (ui->labelCarriage->width() / 2);
-
-    // Передвигаем! (Y оставляем как был или подправляем под таблицу)
-    ui->labelCarriage->move(x, ui->labelCarriage->y());
+    QTableWidgetItem *item = ui->tableTape->item(0, headPosition);
+    if (!item) return;
+    QRect cellRect = ui->tableTape->visualItemRect(item);
+    int globalX = ui->tableTape->x() + cellRect.center().x() - (ui->labelCarriage->width() / 2);
+    ui->labelCarriage->move(globalX, ui->labelCarriage->y());
 }
