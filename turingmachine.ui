@@ -130,7 +130,7 @@
         <x>10</x>
         <y>90</y>
         <width>731</width>
-        <height>31</height>
+        <height>41</height>
        </rect>
       </property>
       <property name="rowCount">
@@ -305,7 +305,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>120</y>
+        <y>130</y>
         <width>16</width>
         <height>16</height>
        </rect>
