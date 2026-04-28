@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>884</width>
+    <height>680</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,10 +17,10 @@
    <widget class="QStackedWidget" name="stackedWidget">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>30</y>
-      <width>701</width>
-      <height>451</height>
+      <x>30</x>
+      <y>10</y>
+      <width>811</width>
+      <height>561</height>
      </rect>
     </property>
     <property name="currentIndex">
@@ -129,7 +129,7 @@
        <rect>
         <x>10</x>
         <y>90</y>
-        <width>731</width>
+        <width>801</width>
         <height>41</height>
        </rect>
       </property>
@@ -166,8 +166,8 @@
        <rect>
         <x>20</x>
         <y>150</y>
-        <width>461</width>
-        <height>131</height>
+        <width>781</width>
+        <height>291</height>
        </rect>
       </property>
      </widget>
@@ -175,7 +175,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>280</y>
+        <y>440</y>
         <width>51</width>
         <height>32</height>
        </rect>
@@ -187,8 +187,8 @@
      <widget class="QPushButton" name="btnRemoveState">
       <property name="geometry">
        <rect>
-        <x>80</x>
-        <y>280</y>
+        <x>70</x>
+        <y>440</y>
         <width>51</width>
         <height>32</height>
        </rect>
@@ -200,8 +200,8 @@
      <widget class="QPushButton" name="btnBackToAlpha">
       <property name="geometry">
        <rect>
-        <x>20</x>
-        <y>310</y>
+        <x>350</x>
+        <y>500</y>
         <width>131</width>
         <height>32</height>
        </rect>
@@ -213,8 +213,8 @@
      <widget class="QPushButton" name="btnPlay">
       <property name="geometry">
        <rect>
-        <x>20</x>
-        <y>350</y>
+        <x>140</x>
+        <y>500</y>
         <width>51</width>
         <height>32</height>
        </rect>
@@ -226,8 +226,8 @@
      <widget class="QPushButton" name="btnStep">
       <property name="geometry">
        <rect>
-        <x>80</x>
-        <y>350</y>
+        <x>190</x>
+        <y>500</y>
         <width>51</width>
         <height>32</height>
        </rect>
@@ -239,8 +239,8 @@
      <widget class="QPushButton" name="btnPause_2">
       <property name="geometry">
        <rect>
-        <x>140</x>
-        <y>350</y>
+        <x>240</x>
+        <y>500</y>
         <width>51</width>
         <height>32</height>
        </rect>
@@ -252,8 +252,8 @@
      <widget class="QPushButton" name="btnStop">
       <property name="geometry">
        <rect>
-        <x>200</x>
-        <y>350</y>
+        <x>290</x>
+        <y>500</y>
         <width>51</width>
         <height>32</height>
        </rect>
@@ -265,8 +265,8 @@
      <widget class="QLabel" name="label_4">
       <property name="geometry">
        <rect>
-        <x>20</x>
-        <y>390</y>
+        <x>30</x>
+        <y>480</y>
         <width>71</width>
         <height>16</height>
        </rect>
@@ -278,8 +278,8 @@
      <widget class="QPushButton" name="btnSpeedUp">
       <property name="geometry">
        <rect>
-        <x>10</x>
-        <y>410</y>
+        <x>20</x>
+        <y>500</y>
         <width>41</width>
         <height>32</height>
        </rect>
@@ -292,7 +292,7 @@
       <property name="geometry">
        <rect>
         <x>60</x>
-        <y>410</y>
+        <y>500</y>
         <width>41</width>
         <height>32</height>
        </rect>
@@ -322,7 +322,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>884</width>
      <height>37</height>
     </rect>
    </property>
