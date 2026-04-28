@@ -85,7 +85,7 @@ void TuringMachine::makeStep() {
     QTableWidgetItem *ruleItem = ui->tableProgram->item(currentState, col);
     if (!ruleItem || ruleItem->text().isEmpty()) {
         timer->stop();
-        ui->statusbar->showMessage("No rule for q" + QString::number(currentState));
+        ui->statusbar->showMessage("Нет, правла для q" + QString::number(currentState));
         return;
     }
 
