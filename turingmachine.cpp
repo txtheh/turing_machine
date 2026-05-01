@@ -234,10 +234,34 @@ void TuringMachine::on_btnSetAlphabets_clicked()
 {
     mainAlphabet       = ui->lineAlphabetStr->text();
     QString extraAlpha = ui->lineAlphabetExtra->text();
-    QString fullAlpha  = mainAlphabet + extraAlpha;
+    auto hasDuplicates = [](const QString &s, QChar &dup) {  // провер дубликатов
+        for (int i = 0; i < s.length(); ++i)
+            if (s.indexOf(s[i], i + 1) != -1) { dup = s[i]; return true; }
+        return false;
+    };
 
-    if (!fullAlpha.contains("λ"))
-        fullAlpha += "λ";
+    QChar dup;
+    if (hasDuplicates(mainAlphabet, dup)) {
+        QMessageBox::warning(this, "Ошибка алфавита",
+                             QString("Символ «%1» повторяется в основном алфавите.").arg(dup));
+        return;
+    }
+    if (hasDuplicates(extraAlpha, dup)) {
+        QMessageBox::warning(this, "Ошибка алфавита",
+                             QString("Символ «%1» повторяется в доп. символах.").arg(dup));
+        return;
+    }
+    for (QChar ch : extraAlpha) {  // провер алфавита и доп символов
+        if (mainAlphabet.contains(ch)) {
+            QMessageBox::warning(this, "Ошибка алфавита",
+                                 QString("Символ «%1» есть и в основном алфавите, и в доп. символах.\n"
+                                         "Символы не должны повторяться.").arg(ch));
+            return;
+        }
+    }
+
+    QString fullAlpha  = mainAlphabet + extraAlpha;
+    fullAlpha += "λ"; //пуст символ всегда добавляем
 
     disconnect(ui->tableProgram, &QTableWidget::itemChanged,
                this, &TuringMachine::onProgramCellChanged);//перерыв пока снова заполняем таблицу
