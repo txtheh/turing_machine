@@ -120,6 +120,16 @@ void TuringMachine::makeStep()
         return;
     }
 
+    if (lastRuleRow >= 0 && lastRuleCol >= 0) {
+        QTableWidgetItem *prev = ui->tableProgram->item(lastRuleRow, lastRuleCol);
+        if (prev) prev->setData(Qt::BackgroundRole, QVariant()); //сброс подсветки прав
+    }
+
+
+    ruleItem->setBackground(QColor(121, 141, 201)); //подсветка правила
+    lastRuleRow = currentState;
+    lastRuleCol = col;
+
     QStringList parts = ruleItem->text().split(",");
     if (parts.size() < 3) {
         timer->stop();
@@ -130,11 +140,11 @@ void TuringMachine::makeStep()
 
 
     QString symbolToWrite = parts[0].trimmed(); //пуст символ
+    if (symbolToWrite.isEmpty())
+        symbolToWrite = currentSymbol; //оставляем старый символ
+
     if (symbolToWrite == "/\\" || symbolToWrite == "Λ" || symbolToWrite == "/")
         symbolToWrite = "λ";
-    if (symbolToWrite == " " || symbolToWrite.isEmpty())
-        symbolToWrite = "λ";
-
 
     ui->tableTape->item(0, headPosition)->setData(Qt::BackgroundRole, QVariant()); //подсветка
     ui->tableTape->item(0, headPosition)->setText(symbolToWrite);
@@ -152,21 +162,25 @@ void TuringMachine::makeStep()
         if (headPosition >= 0 && headPosition < ui->tableTape->columnCount()) {
             ui->tableTape->item(0, headPosition)->setBackground(QColor(173, 216, 230));
             scrollTapeToHead();
-            updateCarriagePosition(true);
+            updateCarriagePosition(false);
         }
         highlightCurrentState();
         timer->stop();
         setRunningState(false);
         ui->statusbar->showMessage("Готово");
         return;
-    } else {
+    } else if (!nextState.isEmpty()) {
         currentState = nextState.remove("q").toInt();
     }
 
-    if (headPosition >= 0 && headPosition < ui->tableTape->columnCount()) {//подсветка и сдвиг
-        ui->tableTape->item(0, headPosition)->setBackground(QColor(173, 216, 230));
+    if (headPosition >= 0 && headPosition < ui->tableTape->columnCount()) {
         scrollTapeToHead();
         updateCarriagePosition(true);
+        int hp = headPosition;
+        QTimer::singleShot(tickSpeed / 2, this, [this, hp]() {
+            if (hp >= 0 && hp < ui->tableTape->columnCount())
+                ui->tableTape->item(0, hp)->setBackground(QColor(173, 216, 230));
+        });
     }
 
     highlightCurrentState();
@@ -220,7 +234,7 @@ void TuringMachine::updateCarriagePosition(bool animate)
 
     if (animate) {
         QPropertyAnimation *anim = new QPropertyAnimation(ui->labelCarriage, "pos", this);
-        anim->setDuration(qMax(50, tickSpeed - 50));
+        anim->setDuration(tickSpeed);
         anim->setStartValue(ui->labelCarriage->pos());
         anim->setEndValue(QPoint(targetX, targetY));
         anim->setEasingCurve(QEasingCurve::InOutQuad);
@@ -278,7 +292,8 @@ void TuringMachine::on_btnSetAlphabets_clicked()
 
     connect(ui->tableProgram, &QTableWidget::itemChanged,
             this, &TuringMachine::onProgramCellChanged);
-
+    lastRuleRow = -1; //сброс подсветки правила при смене алфавита
+    lastRuleCol = -1;
     ui->stackedWidget->setCurrentIndex(1);
 }
 
@@ -353,7 +368,11 @@ void TuringMachine::onProgramCellChanged(QTableWidgetItem *cellItem)
 {
     if (!cellItem) return;
     QString text = cellItem->text().trimmed();
-    if (text.isEmpty()) return;
+
+    if (text.isEmpty()) {
+        cellItem->setData(Qt::BackgroundRole, QVariant());
+        return;
+    }
 
     // Собираем допустимые символы алфавита
     QString fullAlpha = mainAlphabet + ui->lineAlphabetExtra->text();
@@ -367,30 +386,42 @@ void TuringMachine::onProgramCellChanged(QTableWidgetItem *cellItem)
     if (parts.size() < 3) {
         valid = false;
         errorMsg = "Правило должно иметь формат: символ,направление,состояние\n"
-                   "Например: a,R,q1  или  λ,R,stop";
+                   "Например: a,R,q1  или  λ,R,stop  или  ,, (всё по умолчанию)";
     } else {
-        QString sym = parts[0].trimmed();
-        QString dir = parts[1].trimmed().toUpper();
+        QString sym   = parts[0].trimmed();
+        QString dir   = parts[1].trimmed().toUpper();
         QString state = parts[2].trimmed().toLower();//проверяем символ
-        if (sym == "/\\" || sym == "Λ" || sym == "/") sym = "λ";
-        if (sym == " ") sym = "λ";
-        if (!fullAlpha.isEmpty() && !fullAlpha.contains(sym)) {
-            valid = false;
-            errorMsg = QString("Символ «%1» не входит в алфавит.").arg(sym);
-        }
-        if (dir != "R" && dir != "L" && dir != "N" && dir != "S") {
-            valid = false;
-            errorMsg += "\nНаправление должно быть R, L или N."; //проер направления
+
+
+        if (!sym.isEmpty()) {
+            if (sym == "/\\" || sym == "Λ" || sym == "/") sym = "λ";
+            if (sym == " ") sym = "λ";
+
+
+            if (sym.length() != 1) {
+                valid = false;
+                errorMsg = QString("«%1» — это несколько символов.\n"
+                                   "Это нельзя записать на ленту").arg(sym);
+            } else if (!fullAlpha.isEmpty() && !fullAlpha.contains(sym[0])) {
+                valid = false;
+                errorMsg = QString("Символ «%1» не входит в алфавит или доп символы").arg(sym);
+            }
         }
 
-        if (state != "stop" && state != "!") { //провер сост
+        if (!dir.isEmpty() && dir != "R" && dir != "L" && dir != "N" && dir != "S") {
+            valid = false;
+            errorMsg += "\nНаправление должно быть R, L, N или пустым."; //проер направления
+        }
+
+
+        if (!state.isEmpty() && state != "stop" && state != "!") { //провер сост
             QString stateNum = state;
             stateNum.remove("q");
             bool ok;
             stateNum.toInt(&ok);
             if (!ok) {
                 valid = false;
-                errorMsg += "\nСостояние должно быть q0, q1, ... или stop/!";
+                errorMsg += "\nСостояние должно быть q0, q1, ... или stop/! или пустым.";
             }
         }
     }
@@ -416,6 +447,12 @@ void TuringMachine::setRunningState(bool running)
     ui->btnRemoveState->setEnabled(!running);
     ui->btnPlay->setEnabled(!running);
     ui->btnStep->setEnabled(!running);
+    if (!running && lastRuleRow >= 0 && lastRuleCol >= 0) {
+        QTableWidgetItem *prev = ui->tableProgram->item(lastRuleRow, lastRuleCol);
+        if (prev) prev->setData(Qt::BackgroundRole, QVariant()); //сброс подсветки прав
+        lastRuleRow = -1;
+        lastRuleCol = -1;
+    }
 }
 
 bool TuringMachine::hasStopRule() const
@@ -444,10 +481,12 @@ void TuringMachine::highlightCurrentState()
         QFont font = header->font();
         if (row == currentState) {
             font.setBold(true);
-            header->setForeground(QColor(Qt::blue));
+            header->setForeground(QColor(Qt::white));
+            header->setBackground(QColor(70, 130, 255)); //яркий синий фон для активного состояния
         } else {
             font.setBold(false);
             header->setForeground(QColor(Qt::black));
+            header->setData(Qt::BackgroundRole, QVariant()); //сброс фона
         }
         header->setFont(font);
     }

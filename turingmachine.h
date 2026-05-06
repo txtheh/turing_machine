@@ -40,6 +40,8 @@ private:
     int headPosition;
     int currentState;
     int tickSpeed;
+    int lastRuleRow = -1; //подсветка правила
+    int lastRuleCol = -1;
     QString mainAlphabet;
     void updateCarriagePosition(bool animate);
     void scrollTapeToHead();
