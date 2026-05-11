@@ -183,7 +183,10 @@ void TuringMachine::makeStep()
         });
     }
 
-    highlightCurrentState();
+    QTimer::singleShot(tickSpeed / 2, this, [this]() {
+        highlightCurrentState();
+    });
+
 }
 
 
@@ -482,7 +485,7 @@ void TuringMachine::highlightCurrentState()
         if (row == currentState) {
             font.setBold(true);
             header->setForeground(QColor(Qt::white));
-            header->setBackground(QColor(70, 130, 255)); //яркий синий фон для активного состояния
+            header->setBackground(QColor(70, 130, 255)); //фон для активного состояния
         } else {
             font.setBold(false);
             header->setForeground(QColor(Qt::black));
